@@ -5,10 +5,10 @@ use crate::command::{create_command_buffers, create_command_pool};
 use crate::debug::debug_callback;
 use crate::device::pick_physical_device;
 use crate::framebuffer::create_framebuffers;
+use crate::memory::create_vertex_buffer;
 use crate::pipeline::{create_pipeline, create_render_pass};
 use crate::swapchain::{create_logical_device, create_swapchain, create_swapchain_image_views};
 use crate::sync::create_sync_objects;
-use crate::vertices::create_vertex_buffer;
 use crate::{App, AppData, Instance};
 
 use vulkanalia::loader::{LibloadingLoader, LIBRARY};

@@ -1,10 +1,6 @@
-use anyhow::Result;
 use std::mem::size_of;
 
 use vulkanalia::prelude::v1_3::*;
-use vulkanalia_vma::{self as vma, Alloc};
-
-use crate::AppData;
 
 use cgmath::{vec2, vec3};
 
@@ -53,11 +49,3 @@ pub static VERTICES: [Vertex; 3] = [
     Vertex::new(vec2(0.5, 0.5), vec3(0.0, 1.0, 0.0)),
     Vertex::new(vec2(-0.5, 0.5), vec3(0.0, 0.0, 1.0)),
 ];
-
-pub unsafe fn create_vertex_buffer(
-    instance: &Instance,
-    device: &Device,
-    data: &mut AppData,
-) -> Result<()> {
-    Ok(())
-}
