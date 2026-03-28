@@ -103,8 +103,10 @@ unsafe fn create_instance(window: &Window, entry: &Entry, data: &mut AppData) ->
 pub unsafe fn create_app(window: &Window) -> Result<App> {
     let loader = LibloadingLoader::new(LIBRARY)?;
     let entry = Entry::new(loader).map_err(|b| anyhow!("{}", b))?;
-    let mut data = AppData::default();
-    data.max_frames_in_flight = 2; // TODO
+    let mut data = AppData {
+        max_frames_in_flight: 2, // TODO: Make better way to change it
+        ..Default::default()
+    };
     let instance = create_instance(window, &entry, &mut data)?;
     data.surface = vk_window::create_surface(&instance, &window, &window)?;
     pick_physical_device(&instance, &mut data)?;

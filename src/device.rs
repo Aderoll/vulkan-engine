@@ -32,6 +32,7 @@ pub unsafe fn pick_physical_device(instance: &Instance, data: &mut AppData) -> R
         }
     }
     data.physical_device = valid_devices[valid_devices.len() - 1];
+    // data.physical_device = valid_devices[0];
 
     let optional_extensions: HashSet<vk::ExtensionName> = HashSet::from([
         vk::KHR_SWAPCHAIN_EXTENSION.name,
@@ -40,7 +41,7 @@ pub unsafe fn pick_physical_device(instance: &Instance, data: &mut AppData) -> R
         vk::KHR_MAINTENANCE4_EXTENSION.name,
         vk::KHR_MAINTENANCE5_EXTENSION.name,
         vk::EXT_MEMORY_BUDGET_EXTENSION.name,
-        vk::EXT_BUFFER_DEVICE_ADDRESS_EXTENSION.name,
+        vk::KHR_BUFFER_DEVICE_ADDRESS_EXTENSION.name,
         vk::EXT_MEMORY_PRIORITY_EXTENSION.name,
         vk::AMD_DEVICE_COHERENT_MEMORY_EXTENSION.name,
         vk::KHR_EXTERNAL_MEMORY_WIN32_EXTENSION.name,
@@ -54,7 +55,7 @@ pub unsafe fn pick_physical_device(instance: &Instance, data: &mut AppData) -> R
 
     data.device_extensions = compatible_extensions
         .intersection(&optional_extensions)
-        .map(|e| *e) // If seg error look here
+        .copied()
         .collect();
 
     Ok(())
@@ -79,7 +80,7 @@ unsafe fn check_physical_device(
 unsafe fn check_physical_device_extensions(
     instance: &Instance,
     physical_device: vk::PhysicalDevice,
-    extensions: &Vec<vk::ExtensionName>,
+    extensions: &[vk::ExtensionName],
 ) -> Result<()> {
     let extensions = instance
         .enumerate_device_extension_properties(physical_device, None)?
