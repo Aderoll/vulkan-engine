@@ -4,8 +4,12 @@ use std::ptr::copy_nonoverlapping as memcpy;
 
 use vulkanalia::prelude::v1_3::*;
 
+use crate::descriptors::Mat4;
+use crate::descriptors::UniformBufferObject;
 use crate::vertices::{Vertex, INDICES, VERTICES};
-use crate::AppData;
+use crate::{App, AppData};
+
+use cgmath::{point3, vec3, Deg};
 
 pub unsafe fn get_memory_type_index(
     instance: &Instance,
@@ -175,6 +179,68 @@ pub unsafe fn create_index_buffer(
 
     data.index_buffer = index_buffer;
     data.index_buffer_memory = index_buffer_memory;
+
+    Ok(())
+}
+
+pub unsafe fn create_uniform_buffers(
+    instance: &Instance,
+    device: &Device,
+    data: &mut AppData,
+) -> Result<()> {
+    data.uniform_buffers.clear();
+    data.uniform_buffers_memory.clear();
+
+    for _ in 0..data.swapchain_images.len() {
+        let (uniform_buffer, uniform_buffer_memory) = create_buffer(
+            instance,
+            device,
+            data,
+            size_of::<UniformBufferObject>() as u64,
+            vk::BufferUsageFlags::UNIFORM_BUFFER,
+            vk::MemoryPropertyFlags::HOST_COHERENT | vk::MemoryPropertyFlags::HOST_VISIBLE,
+        )?;
+
+        data.uniform_buffers.push(uniform_buffer);
+        data.uniform_buffers_memory.push(uniform_buffer_memory);
+    }
+
+    Ok(())
+}
+
+pub unsafe fn update_uniform_buffer(app: &mut App, image_index: usize) -> Result<()> {
+    let time = app.start.elapsed().as_secs_f32();
+
+    let model = Mat4::from_axis_angle(vec3(0.0, 0.0, 1.0), Deg(90.0) * time);
+
+    let view = Mat4::look_at_rh(
+        point3(2.0, 2.0, 2.0),
+        point3(0.0, 0.0, 0.0),
+        vec3(0.0, 0.0, 1.0),
+    );
+
+    let mut proj = cgmath::perspective(
+        Deg(45.0),
+        app.data.swapchain_extent.width as f32 / app.data.swapchain_extent.height as f32,
+        0.1,
+        10.0,
+    );
+
+    proj[1][1] *= -1.0; // Invert from OpenGL's Y system to Vulkan's
+
+    let ubo = UniformBufferObject { model, view, proj };
+
+    let memory = app.device.map_memory(
+        app.data.uniform_buffers_memory[image_index],
+        0,
+        size_of::<UniformBufferObject>() as u64,
+        vk::MemoryMapFlags::empty(),
+    )?;
+
+    memcpy(&ubo, memory.cast(), 1);
+
+    app.device
+        .unmap_memory(app.data.uniform_buffers_memory[image_index]);
 
     Ok(())
 }

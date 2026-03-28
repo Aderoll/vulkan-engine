@@ -19,21 +19,26 @@ use winit::event::{Event, WindowEvent};
 use winit::event_loop::EventLoop;
 use winit::window::{Window, WindowBuilder};
 
+use std::time::Instant;
+
 use vulkanalia::vk::ExtDebugUtilsExtensionInstanceCommands;
 use vulkanalia::vk::KhrSurfaceExtensionInstanceCommands;
 use vulkanalia::vk::KhrSwapchainExtensionDeviceCommands;
 
 use crate::command::create_command_buffers;
 use crate::debug::debug_callback;
+use crate::descriptors::{create_descriptor_pool, create_descriptor_sets};
 use crate::framebuffer::create_framebuffers;
 use crate::initialization::create_app;
 use crate::pipeline::{create_pipeline, create_render_pass};
 use crate::swapchain::{create_swapchain, create_swapchain_image_views};
+use memory::{create_uniform_buffers, update_uniform_buffer};
 
 use std::collections::HashSet;
 
 mod command;
 mod debug;
+mod descriptors;
 mod device;
 mod framebuffer;
 mod initialization;
@@ -104,6 +109,7 @@ struct App {
     device: Device,
     frame: usize,
     resized: bool,
+    start: Instant,
 }
 
 impl App {
@@ -134,6 +140,8 @@ impl App {
         }
 
         self.data.images_in_flight[image_index] = in_flight_fence;
+
+        update_uniform_buffer(self, image_index)?;
 
         let wait_semaphores = &[self.data.image_available_semaphores[self.frame]];
         let wait_stages = &[vk::PipelineStageFlags::COLOR_ATTACHMENT_OUTPUT];
@@ -184,6 +192,9 @@ impl App {
         create_render_pass(&self.instance, &self.device, &mut self.data)?;
         create_pipeline(&self.device, &mut self.data)?;
         create_framebuffers(&self.device, &mut self.data)?;
+        create_uniform_buffers(&self.instance, &self.device, &mut self.data)?;
+        create_descriptor_pool(&self.device, &mut self.data)?;
+        create_descriptor_sets(&self.device, &mut self.data)?;
         create_command_buffers(&self.device, &mut self.data)?;
         self.data.images_in_flight.resize(self.data.swapchain_images.len(), vk::Fence::null());
         Ok(())
@@ -194,7 +205,9 @@ impl App {
     unsafe fn destroy(&mut self) {
         self.device.device_wait_idle().unwrap();
 
+        self.device.destroy_descriptor_pool(self.data.descriptor_pool, None);
         self.destroy_swapchain();
+        self.device.destroy_descriptor_set_layout(self.data.descriptor_set_layout, None);
 
         // Buffers
         self.device.destroy_buffer(self.data.vertex_buffer, None);
@@ -219,6 +232,12 @@ impl App {
     /// Destroys the parts of our Vulkan app related to the swapchain.
     #[rustfmt::skip]
     unsafe fn destroy_swapchain(&mut self) {
+        self.data.uniform_buffers
+            .iter()
+            .for_each(|b| self.device.destroy_buffer(*b, None));
+        self.data.uniform_buffers_memory
+            .iter()
+            .for_each(|m| self.device.free_memory(*m, None));
         self.device.free_command_buffers(self.data.command_pool, &self.data.command_buffers);
         self.data.framebuffers.iter().for_each(|f| self.device.destroy_framebuffer(*f, None));
         self.device.destroy_pipeline(self.data.pipeline, None);
@@ -253,6 +272,10 @@ struct AppData {
     render_pass: vk::RenderPass,
     pipeline_layout: vk::PipelineLayout,
     pipeline: vk::Pipeline,
+    // Descriptors
+    descriptor_set_layout: vk::DescriptorSetLayout,
+    descriptor_pool: vk::DescriptorPool,
+    descriptor_sets: Vec<vk::DescriptorSet>,
     // Framebuffers
     framebuffers: Vec<vk::Framebuffer>,
     // Command Pool
@@ -264,6 +287,8 @@ struct AppData {
     vertex_buffer_memory: vk::DeviceMemory,
     index_buffer: vk::Buffer,
     index_buffer_memory: vk::DeviceMemory,
+    uniform_buffers: Vec<vk::Buffer>,
+    uniform_buffers_memory: Vec<vk::DeviceMemory>,
     // Sync Objects
     image_available_semaphores: Vec<vk::Semaphore>,
     render_finished_semaphores: Vec<vk::Semaphore>,

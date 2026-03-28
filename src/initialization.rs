@@ -1,8 +1,13 @@
 use anyhow::{anyhow, Result};
 use std::collections::HashSet;
+use std::time::Instant;
 
 use crate::command::{create_command_buffers, create_command_pool};
+use crate::create_uniform_buffers;
 use crate::debug::debug_callback;
+use crate::descriptors::{
+    create_descriptor_pool, create_descriptor_set_layout, create_descriptor_sets,
+};
 use crate::device::pick_physical_device;
 use crate::framebuffer::create_framebuffers;
 use crate::memory::{create_index_buffer, create_vertex_buffer};
@@ -114,11 +119,15 @@ pub unsafe fn create_app(window: &Window) -> Result<App> {
     create_swapchain(window, &instance, &device, &mut data)?;
     create_swapchain_image_views(&device, &mut data)?;
     create_render_pass(&instance, &device, &mut data)?;
+    create_descriptor_set_layout(&device, &mut data)?;
     create_pipeline(&device, &mut data)?;
     create_framebuffers(&device, &mut data)?;
     create_command_pool(&instance, &device, &mut data)?;
     create_vertex_buffer(&instance, &device, &mut data)?;
     create_index_buffer(&instance, &device, &mut data)?;
+    create_uniform_buffers(&instance, &device, &mut data)?;
+    create_descriptor_pool(&device, &mut data)?;
+    create_descriptor_sets(&device, &mut data)?;
     create_command_buffers(&device, &mut data)?;
     create_sync_objects(&device, &mut data)?;
     Ok(App {
@@ -128,5 +137,6 @@ pub unsafe fn create_app(window: &Window) -> Result<App> {
         device,
         frame: 0,
         resized: false,
+        start: Instant::now(),
     })
 }
