@@ -10,6 +10,7 @@ use crate::descriptors::{
 };
 use crate::device::pick_physical_device;
 use crate::framebuffer::create_framebuffers;
+use crate::images::create_texture_image;
 use crate::memory::{create_index_buffer, create_vertex_buffer};
 use crate::pipeline::{create_pipeline, create_render_pass};
 use crate::swapchain::{create_logical_device, create_swapchain, create_swapchain_image_views};
@@ -123,6 +124,7 @@ pub unsafe fn create_app(window: &Window) -> Result<App> {
     create_pipeline(&device, &mut data)?;
     create_framebuffers(&device, &mut data)?;
     create_command_pool(&instance, &device, &mut data)?;
+    create_texture_image(&instance, &device, &mut data)?;
     create_vertex_buffer(&instance, &device, &mut data)?;
     create_index_buffer(&instance, &device, &mut data)?;
     create_uniform_buffers(&instance, &device, &mut data)?;

@@ -41,6 +41,7 @@ mod debug;
 mod descriptors;
 mod device;
 mod framebuffer;
+mod images;
 mod initialization;
 mod memory;
 mod pipeline;
@@ -207,6 +208,8 @@ impl App {
 
         self.device.destroy_descriptor_pool(self.data.descriptor_pool, None);
         self.destroy_swapchain();
+        self.device.destroy_image(self.data.texture_image, None);
+        self.device.free_memory(self.data.texture_image_memory, None);
         self.device.destroy_descriptor_set_layout(self.data.descriptor_set_layout, None);
 
         // Buffers
@@ -289,6 +292,9 @@ struct AppData {
     index_buffer_memory: vk::DeviceMemory,
     uniform_buffers: Vec<vk::Buffer>,
     uniform_buffers_memory: Vec<vk::DeviceMemory>,
+    // Images
+    texture_image: vk::Image,
+    texture_image_memory: vk::DeviceMemory,
     // Sync Objects
     image_available_semaphores: Vec<vk::Semaphore>,
     render_finished_semaphores: Vec<vk::Semaphore>,
