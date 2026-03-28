@@ -5,7 +5,7 @@ use crate::command::{create_command_buffers, create_command_pool};
 use crate::debug::debug_callback;
 use crate::device::pick_physical_device;
 use crate::framebuffer::create_framebuffers;
-use crate::memory::create_vertex_buffer;
+use crate::memory::{create_index_buffer, create_vertex_buffer};
 use crate::pipeline::{create_pipeline, create_render_pass};
 use crate::swapchain::{create_logical_device, create_swapchain, create_swapchain_image_views};
 use crate::sync::create_sync_objects;
@@ -118,6 +118,7 @@ pub unsafe fn create_app(window: &Window) -> Result<App> {
     create_framebuffers(&device, &mut data)?;
     create_command_pool(&instance, &device, &mut data)?;
     create_vertex_buffer(&instance, &device, &mut data)?;
+    create_index_buffer(&instance, &device, &mut data)?;
     create_command_buffers(&device, &mut data)?;
     create_sync_objects(&device, &mut data)?;
     Ok(App {

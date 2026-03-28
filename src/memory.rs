@@ -4,7 +4,7 @@ use std::ptr::copy_nonoverlapping as memcpy;
 
 use vulkanalia::prelude::v1_3::*;
 
-use crate::vertices::{Vertex, VERTICES};
+use crate::vertices::{Vertex, INDICES, VERTICES};
 use crate::AppData;
 
 pub unsafe fn get_memory_type_index(
@@ -56,13 +56,15 @@ pub unsafe fn create_buffer(
     Ok((buffer, buffer_memory))
 }
 
-pub unsafe fn create_vertex_buffer(
+pub unsafe fn create_buffer_staged<T>(
+    source: &[T],
     instance: &Instance,
     device: &Device,
-    data: &mut AppData,
-) -> Result<()> {
-    let size = (size_of::<Vertex>() * VERTICES.len()) as u64;
-
+    data: &AppData,
+    size: vk::DeviceSize,
+    usage: vk::BufferUsageFlags,
+    properties: vk::MemoryPropertyFlags,
+) -> Result<(vk::Buffer, vk::DeviceMemory)> {
     let (staging_buffer, staging_buffer_memory) = create_buffer(
         instance,
         device,
@@ -74,28 +76,25 @@ pub unsafe fn create_vertex_buffer(
 
     let memory = device.map_memory(staging_buffer_memory, 0, size, vk::MemoryMapFlags::empty())?;
 
-    memcpy(VERTICES.as_ptr(), memory.cast(), VERTICES.len());
+    memcpy(source.as_ptr(), memory.cast(), source.len());
 
     device.unmap_memory(staging_buffer_memory);
 
-    let (vertex_buffer, vertex_buffer_memory) = create_buffer(
+    let (buffer, buffer_memory) = create_buffer(
         instance,
         device,
         data,
         size,
-        vk::BufferUsageFlags::TRANSFER_DST | vk::BufferUsageFlags::VERTEX_BUFFER,
-        vk::MemoryPropertyFlags::DEVICE_LOCAL,
+        usage | vk::BufferUsageFlags::TRANSFER_DST,
+        properties,
     )?;
 
-    copy_buffer(device, data, staging_buffer, vertex_buffer, size)?;
+    copy_buffer(device, data, staging_buffer, buffer, size)?;
 
     device.destroy_buffer(staging_buffer, None);
     device.free_memory(staging_buffer_memory, None);
 
-    data.vertex_buffer = vertex_buffer;
-    data.vertex_buffer_memory = vertex_buffer_memory;
-
-    Ok(())
+    Ok((buffer, buffer_memory))
 }
 
 unsafe fn copy_buffer(
@@ -129,5 +128,53 @@ unsafe fn copy_buffer(
     device.queue_wait_idle(data.graphics_queue)?;
 
     device.free_command_buffers(data.command_pool, &[command_buffer]);
+    Ok(())
+}
+
+pub unsafe fn create_vertex_buffer(
+    instance: &Instance,
+    device: &Device,
+    data: &mut AppData,
+) -> Result<()> {
+    let size = (size_of::<Vertex>() * VERTICES.len()) as u64;
+
+    let (vertex_buffer, vertex_buffer_memory) = create_buffer_staged(
+        VERTICES.as_slice(),
+        instance,
+        device,
+        data,
+        size,
+        vk::BufferUsageFlags::VERTEX_BUFFER,
+        vk::MemoryPropertyFlags::DEVICE_LOCAL,
+    )
+    .expect("Could not create Vertex Buffer");
+
+    data.vertex_buffer = vertex_buffer;
+    data.vertex_buffer_memory = vertex_buffer_memory;
+
+    Ok(())
+}
+
+pub unsafe fn create_index_buffer(
+    instance: &Instance,
+    device: &Device,
+    data: &mut AppData,
+) -> Result<()> {
+    let size = (size_of::<u16>() * INDICES.len()) as u64;
+
+    let (index_buffer, index_buffer_memory) = create_buffer_staged(
+        INDICES,
+        instance,
+        device,
+        data,
+        size,
+        vk::BufferUsageFlags::INDEX_BUFFER,
+        vk::MemoryPropertyFlags::DEVICE_LOCAL,
+    )
+    .expect("Could not create Index Buffer");
+
+    data.index_buffer = index_buffer;
+    data.index_buffer_memory = index_buffer_memory;
+
     Ok(())
 }
