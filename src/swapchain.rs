@@ -7,9 +7,8 @@ use vulkanalia::vk::KhrSwapchainExtensionDeviceCommands;
 use winit::window::Window;
 
 use crate::device::SuitabilityError;
+use crate::images::create_image_view;
 use crate::{AppData, Instance};
-
-use std::collections::HashSet;
 
 #[derive(Copy, Clone, Debug)]
 pub struct QueueFamilyIndices {
@@ -179,90 +178,14 @@ pub unsafe fn create_swapchain_image_views(device: &Device, data: &mut AppData) 
         .swapchain_images
         .iter()
         .map(|i| {
-            let components = vk::ComponentMapping::builder()
-                .r(vk::ComponentSwizzle::IDENTITY)
-                .g(vk::ComponentSwizzle::IDENTITY)
-                .b(vk::ComponentSwizzle::IDENTITY)
-                .a(vk::ComponentSwizzle::IDENTITY);
-
-            let subresource_range = vk::ImageSubresourceRange::builder()
-                .aspect_mask(vk::ImageAspectFlags::COLOR)
-                .base_mip_level(0)
-                .level_count(1)
-                .base_array_layer(0)
-                .layer_count(1);
-
-            let info = vk::ImageViewCreateInfo::builder()
-                .image(*i)
-                .view_type(vk::ImageViewType::_2D)
-                .format(data.swapchain_format)
-                .components(components)
-                .subresource_range(subresource_range);
-
-            device.create_image_view(&info, None)
+            create_image_view(
+                device,
+                *i,
+                data.swapchain_format,
+                vk::ImageAspectFlags::COLOR,
+            )
         })
         .collect::<Result<Vec<_>, _>>()?;
 
     Ok(())
-}
-
-pub unsafe fn create_logical_device(
-    entry: &Entry,
-    instance: &Instance,
-    data: &mut AppData,
-) -> Result<Device> {
-    // Queue Create Infos
-
-    let indices = QueueFamilyIndices::get(instance, data, data.physical_device)?;
-
-    let mut unique_indices = HashSet::new();
-    unique_indices.insert(indices.graphics);
-    unique_indices.insert(indices.present);
-
-    let queue_priorities = &[1.0];
-    let queue_infos = unique_indices
-        .iter()
-        .map(|i| {
-            vk::DeviceQueueCreateInfo::builder()
-                .queue_family_index(*i)
-                .queue_priorities(queue_priorities)
-        })
-        .collect::<Vec<_>>();
-
-    // Layers
-
-    let layers = if data.validation_enabled {
-        vec![data.validation_layer.as_ptr()]
-    } else {
-        vec![]
-    };
-
-    // Extensions
-
-    let extensions = data
-        .device_extensions
-        .iter()
-        .map(|n| n.as_ptr())
-        .collect::<Vec<_>>();
-
-    // Features
-
-    let features = vk::PhysicalDeviceFeatures::builder();
-
-    // Create
-
-    let info = vk::DeviceCreateInfo::builder()
-        .queue_create_infos(&queue_infos)
-        .enabled_layer_names(&layers)
-        .enabled_extension_names(&extensions)
-        .enabled_features(&features);
-
-    let device = instance.create_device(data.physical_device, &info, None)?;
-
-    // Queues
-
-    data.graphics_queue = device.get_device_queue(indices.graphics, 0);
-    data.present_queue = device.get_device_queue(indices.present, 0);
-
-    Ok(device)
 }

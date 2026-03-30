@@ -27,6 +27,7 @@ use vulkanalia::vk::KhrSwapchainExtensionDeviceCommands;
 
 use crate::command::create_command_buffers;
 use crate::debug::debug_callback;
+use crate::depth::create_depth_objects;
 use crate::descriptors::{create_descriptor_pool, create_descriptor_sets};
 use crate::framebuffer::create_framebuffers;
 use crate::initialization::create_app;
@@ -38,6 +39,7 @@ use std::collections::HashSet;
 
 mod command;
 mod debug;
+mod depth;
 mod descriptors;
 mod device;
 mod framebuffer;
@@ -51,6 +53,64 @@ mod vertices;
 
 /// The Vulkan SDK version that started requiring the portability subset extension for macOS.
 const PORTABILITY_MACOS_VERSION: Version = Version::new(1, 3, 216);
+
+/// The Vulkan handles and associated properties used by our Vulkan app.
+#[derive(Clone, Debug, Default)]
+struct AppData {
+    // Debug
+    messenger: vk::DebugUtilsMessengerEXT,
+    validation_enabled: bool,
+    validation_layer: vk::ExtensionName,
+    // Surface
+    surface: vk::SurfaceKHR,
+    // Physical Device / Logical Device
+    physical_device: vk::PhysicalDevice,
+    graphics_queue: vk::Queue,
+    present_queue: vk::Queue,
+    device_extensions: Vec<vk::ExtensionName>,
+    // Swapchain
+    swapchain_format: vk::Format,
+    swapchain_extent: vk::Extent2D,
+    swapchain: vk::SwapchainKHR,
+    swapchain_images: Vec<vk::Image>,
+    swapchain_image_views: Vec<vk::ImageView>,
+    // Pipeline
+    render_pass: vk::RenderPass,
+    pipeline_layout: vk::PipelineLayout,
+    pipeline: vk::Pipeline,
+    // Descriptors
+    descriptor_set_layout: vk::DescriptorSetLayout,
+    descriptor_pool: vk::DescriptorPool,
+    descriptor_sets: Vec<vk::DescriptorSet>,
+    // Framebuffers
+    framebuffers: Vec<vk::Framebuffer>,
+    // Command Pool
+    command_pool: vk::CommandPool,
+    // Command Buffers
+    command_buffers: Vec<vk::CommandBuffer>,
+    // Buffers
+    vertex_buffer: vk::Buffer,
+    vertex_buffer_memory: vk::DeviceMemory,
+    index_buffer: vk::Buffer,
+    index_buffer_memory: vk::DeviceMemory,
+    uniform_buffers: Vec<vk::Buffer>,
+    uniform_buffers_memory: Vec<vk::DeviceMemory>,
+    // Depth
+    depth_image: vk::Image,
+    depth_image_memory: vk::DeviceMemory,
+    depth_image_view: vk::ImageView,
+    // Images
+    texture_image: vk::Image,
+    texture_image_memory: vk::DeviceMemory,
+    texture_image_view: vk::ImageView,
+    texture_sampler: vk::Sampler,
+    // Sync Objects
+    image_available_semaphores: Vec<vk::Semaphore>,
+    render_finished_semaphores: Vec<vk::Semaphore>,
+    in_flight_fences: Vec<vk::Fence>,
+    images_in_flight: Vec<vk::Fence>,
+    max_frames_in_flight: usize,
+}
 
 pub fn run() -> Result<()> {
     pretty_env_logger::init();
@@ -192,6 +252,7 @@ impl App {
         create_swapchain_image_views(&self.device, &mut self.data)?;
         create_render_pass(&self.instance, &self.device, &mut self.data)?;
         create_pipeline(&self.device, &mut self.data)?;
+        create_depth_objects(&self.instance, &self.device, &mut self.data)?;
         create_framebuffers(&self.device, &mut self.data)?;
         create_uniform_buffers(&self.instance, &self.device, &mut self.data)?;
         create_descriptor_pool(&self.device, &mut self.data)?;
@@ -206,8 +267,14 @@ impl App {
     unsafe fn destroy(&mut self) {
         self.device.device_wait_idle().unwrap();
 
+        self.device.destroy_image_view(self.data.depth_image_view, None);
+        self.device.free_memory(self.data.depth_image_memory, None);
+        self.device.destroy_image(self.data.depth_image, None);
+
         self.device.destroy_descriptor_pool(self.data.descriptor_pool, None);
         self.destroy_swapchain();
+        self.device.destroy_sampler(self.data.texture_sampler, None);
+        self.device.destroy_image_view(self.data.texture_image_view, None);
         self.device.destroy_image(self.data.texture_image, None);
         self.device.free_memory(self.data.texture_image_memory, None);
         self.device.destroy_descriptor_set_layout(self.data.descriptor_set_layout, None);
@@ -249,58 +316,6 @@ impl App {
         self.data.swapchain_image_views.iter().for_each(|v| self.device.destroy_image_view(*v, None));
         self.device.destroy_swapchain_khr(self.data.swapchain, None);
     }
-}
-
-/// The Vulkan handles and associated properties used by our Vulkan app.
-#[derive(Clone, Debug, Default)]
-struct AppData {
-    // Debug
-    messenger: vk::DebugUtilsMessengerEXT,
-    validation_enabled: bool,
-    validation_layer: vk::ExtensionName,
-    // Surface
-    surface: vk::SurfaceKHR,
-    // Physical Device / Logical Device
-    physical_device: vk::PhysicalDevice,
-    graphics_queue: vk::Queue,
-    present_queue: vk::Queue,
-    device_extensions: Vec<vk::ExtensionName>,
-    // Swapchain
-    swapchain_format: vk::Format,
-    swapchain_extent: vk::Extent2D,
-    swapchain: vk::SwapchainKHR,
-    swapchain_images: Vec<vk::Image>,
-    swapchain_image_views: Vec<vk::ImageView>,
-    // Pipeline
-    render_pass: vk::RenderPass,
-    pipeline_layout: vk::PipelineLayout,
-    pipeline: vk::Pipeline,
-    // Descriptors
-    descriptor_set_layout: vk::DescriptorSetLayout,
-    descriptor_pool: vk::DescriptorPool,
-    descriptor_sets: Vec<vk::DescriptorSet>,
-    // Framebuffers
-    framebuffers: Vec<vk::Framebuffer>,
-    // Command Pool
-    command_pool: vk::CommandPool,
-    // Command Buffers
-    command_buffers: Vec<vk::CommandBuffer>,
-    // Buffers
-    vertex_buffer: vk::Buffer,
-    vertex_buffer_memory: vk::DeviceMemory,
-    index_buffer: vk::Buffer,
-    index_buffer_memory: vk::DeviceMemory,
-    uniform_buffers: Vec<vk::Buffer>,
-    uniform_buffers_memory: Vec<vk::DeviceMemory>,
-    // Images
-    texture_image: vk::Image,
-    texture_image_memory: vk::DeviceMemory,
-    // Sync Objects
-    image_available_semaphores: Vec<vk::Semaphore>,
-    render_finished_semaphores: Vec<vk::Semaphore>,
-    in_flight_fences: Vec<vk::Fence>,
-    images_in_flight: Vec<vk::Fence>,
-    max_frames_in_flight: usize,
 }
 
 //================================================

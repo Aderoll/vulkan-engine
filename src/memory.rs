@@ -203,14 +203,32 @@ pub unsafe fn update_uniform_buffer(app: &mut App, image_index: usize) -> Result
         vec3(0.0, 0.0, 1.0),
     );
 
-    let mut proj = cgmath::perspective(
-        Deg(45.0),
-        app.data.swapchain_extent.width as f32 / app.data.swapchain_extent.height as f32,
-        0.1,
-        10.0,
+    let correction = Mat4::new(
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0 / 2.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0 / 2.0,
+        1.0,
     );
 
-    proj[1][1] *= -1.0; // Invert from OpenGL's Y system to Vulkan's
+    let proj = correction
+        * cgmath::perspective(
+            Deg(45.0),
+            app.data.swapchain_extent.width as f32 / app.data.swapchain_extent.height as f32,
+            0.1,
+            10.0,
+        );
 
     let ubo = UniformBufferObject { model, view, proj };
 
