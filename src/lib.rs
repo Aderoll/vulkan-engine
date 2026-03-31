@@ -33,6 +33,7 @@ use crate::framebuffer::create_framebuffers;
 use crate::initialization::create_app;
 use crate::pipeline::{create_pipeline, create_render_pass};
 use crate::swapchain::{create_swapchain, create_swapchain_image_views};
+use crate::vertices::Vertex;
 use memory::{create_uniform_buffers, update_uniform_buffer};
 
 use std::collections::HashSet;
@@ -46,6 +47,7 @@ mod framebuffer;
 mod images;
 mod initialization;
 mod memory;
+mod model;
 mod pipeline;
 mod swapchain;
 mod sync;
@@ -104,6 +106,9 @@ struct AppData {
     texture_image_memory: vk::DeviceMemory,
     texture_image_view: vk::ImageView,
     texture_sampler: vk::Sampler,
+    // Models
+    vertices: Vec<Vertex>,
+    indices: Vec<u32>,
     // Sync Objects
     image_available_semaphores: Vec<vk::Semaphore>,
     render_finished_semaphores: Vec<vk::Semaphore>,

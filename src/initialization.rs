@@ -13,6 +13,7 @@ use crate::device::{create_logical_device, pick_physical_device};
 use crate::framebuffer::create_framebuffers;
 use crate::images::{create_texture_image, create_texture_image_view, create_texture_sampler};
 use crate::memory::{create_index_buffer, create_vertex_buffer};
+use crate::model::load_model;
 use crate::pipeline::{create_pipeline, create_render_pass};
 use crate::swapchain::{create_swapchain, create_swapchain_image_views};
 use crate::sync::create_sync_objects;
@@ -129,6 +130,7 @@ pub unsafe fn create_app(window: &Window) -> Result<App> {
     create_texture_image(&instance, &device, &mut data)?;
     create_texture_image_view(&device, &mut data)?;
     create_texture_sampler(&device, &mut data)?;
+    load_model(&mut data)?;
     create_vertex_buffer(&instance, &device, &mut data)?;
     create_index_buffer(&instance, &device, &mut data)?;
     create_uniform_buffers(&instance, &device, &mut data)?;

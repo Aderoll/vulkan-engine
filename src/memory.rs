@@ -7,7 +7,7 @@ use vulkanalia::prelude::v1_3::*;
 use crate::command::{begin_single_time_commands, end_single_time_commands};
 use crate::descriptors::Mat4;
 use crate::descriptors::UniformBufferObject;
-use crate::vertices::{Vertex, INDICES, VERTICES};
+use crate::vertices::Vertex;
 use crate::{App, AppData};
 
 use cgmath::{point3, vec3, Deg};
@@ -124,10 +124,10 @@ pub unsafe fn create_vertex_buffer(
     device: &Device,
     data: &mut AppData,
 ) -> Result<()> {
-    let size = (size_of::<Vertex>() * VERTICES.len()) as u64;
+    let size = (size_of::<Vertex>() * data.vertices.len()) as u64;
 
     let (vertex_buffer, vertex_buffer_memory) = create_buffer_staged(
-        VERTICES.as_slice(),
+        data.vertices.as_slice(),
         instance,
         device,
         data,
@@ -148,10 +148,10 @@ pub unsafe fn create_index_buffer(
     device: &Device,
     data: &mut AppData,
 ) -> Result<()> {
-    let size = (size_of::<u16>() * INDICES.len()) as u64;
+    let size = (size_of::<u32>() * data.indices.len()) as u64;
 
     let (index_buffer, index_buffer_memory) = create_buffer_staged(
-        INDICES,
+        data.indices.as_slice(),
         instance,
         device,
         data,
