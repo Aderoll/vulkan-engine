@@ -102,6 +102,7 @@ struct AppData {
     depth_image_memory: vk::DeviceMemory,
     depth_image_view: vk::ImageView,
     // Images
+    mip_levels: u32,
     texture_image: vk::Image,
     texture_image_memory: vk::DeviceMemory,
     texture_image_view: vk::ImageView,
