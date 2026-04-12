@@ -35,8 +35,14 @@ pub unsafe fn pick_physical_device(instance: &Instance, data: &mut AppData) -> R
             valid_devices.push(physical_device);
         }
     }
-    data.physical_device = valid_devices[valid_devices.len() - 1];
-    // data.physical_device = valid_devices[0];
+    //data.physical_device = valid_devices[valid_devices.len() - 1];
+    data.physical_device = valid_devices[0];
+    data.msaa_samples = get_max_msaa_samples(instance, data);
+
+    let properties = instance.get_physical_device_properties(data.physical_device);
+
+    info!("Using device (`{}`)", properties.device_name);
+    info!("Using MSAA samples: {:?}", data.msaa_samples);
 
     let optional_extensions: HashSet<vk::ExtensionName> = HashSet::from([
         vk::KHR_SWAPCHAIN_EXTENSION.name,
@@ -82,6 +88,10 @@ unsafe fn check_physical_device(
     if features.sampler_anisotropy != vk::TRUE {
         return Err(anyhow!(SuitabilityError("No sampler anisotropy.")));
     }
+    let properties = instance.get_physical_device_properties(physical_device);
+    if properties.device_type != vk::PhysicalDeviceType::DISCRETE_GPU {
+        return Err(anyhow!(SuitabilityError("Is not a DISCRETE_GPU")));
+    }
 
     Ok(())
 }
@@ -103,6 +113,24 @@ unsafe fn check_physical_device_extensions(
             "Missing required device extensions."
         )))
     }
+}
+
+pub unsafe fn get_max_msaa_samples(instance: &Instance, data: &AppData) -> vk::SampleCountFlags {
+    let properties = instance.get_physical_device_properties(data.physical_device);
+    let counts = properties.limits.framebuffer_color_sample_counts
+        & properties.limits.framebuffer_depth_sample_counts;
+    [
+        vk::SampleCountFlags::_64,
+        vk::SampleCountFlags::_32,
+        vk::SampleCountFlags::_16,
+        vk::SampleCountFlags::_8,
+        vk::SampleCountFlags::_4,
+        vk::SampleCountFlags::_2,
+    ]
+    .iter()
+    .cloned()
+    .find(|c| counts.contains(*c))
+    .unwrap_or(vk::SampleCountFlags::_1)
 }
 
 pub unsafe fn create_logical_device(
@@ -146,7 +174,9 @@ pub unsafe fn create_logical_device(
 
     // Features
 
-    let features = vk::PhysicalDeviceFeatures::builder().sampler_anisotropy(true);
+    let features = vk::PhysicalDeviceFeatures::builder()
+        .sampler_anisotropy(true)
+        .sample_rate_shading(true);
 
     // Create
 

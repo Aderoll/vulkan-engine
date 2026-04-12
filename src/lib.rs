@@ -30,6 +30,7 @@ use crate::debug::debug_callback;
 use crate::depth::create_depth_objects;
 use crate::descriptors::{create_descriptor_pool, create_descriptor_sets};
 use crate::framebuffer::create_framebuffers;
+use crate::images::create_color_objects;
 use crate::initialization::create_app;
 use crate::pipeline::{create_pipeline, create_render_pass};
 use crate::swapchain::{create_swapchain, create_swapchain_image_views};
@@ -70,6 +71,7 @@ struct AppData {
     graphics_queue: vk::Queue,
     present_queue: vk::Queue,
     device_extensions: Vec<vk::ExtensionName>,
+    msaa_samples: vk::SampleCountFlags,
     // Swapchain
     swapchain_format: vk::Format,
     swapchain_extent: vk::Extent2D,
@@ -101,6 +103,10 @@ struct AppData {
     depth_image: vk::Image,
     depth_image_memory: vk::DeviceMemory,
     depth_image_view: vk::ImageView,
+    // MSAA
+    color_image: vk::Image,
+    color_image_memory: vk::DeviceMemory,
+    color_image_view: vk::ImageView,
     // Images
     mip_levels: u32,
     texture_image: vk::Image,
@@ -258,6 +264,7 @@ impl App {
         create_swapchain_image_views(&self.device, &mut self.data)?;
         create_render_pass(&self.instance, &self.device, &mut self.data)?;
         create_pipeline(&self.device, &mut self.data)?;
+        create_color_objects(&self.instance, &self.device, &mut self.data)?;
         create_depth_objects(&self.instance, &self.device, &mut self.data)?;
         create_framebuffers(&self.device, &mut self.data)?;
         create_uniform_buffers(&self.instance, &self.device, &mut self.data)?;
@@ -276,6 +283,10 @@ impl App {
         self.device.destroy_image_view(self.data.depth_image_view, None);
         self.device.free_memory(self.data.depth_image_memory, None);
         self.device.destroy_image(self.data.depth_image, None);
+
+        self.device.destroy_image_view(self.data.color_image_view, None);
+        self.device.free_memory(self.data.color_image_memory, None);
+        self.device.destroy_image(self.data.color_image, None);
 
         self.device.destroy_descriptor_pool(self.data.descriptor_pool, None);
         self.destroy_swapchain();

@@ -11,7 +11,9 @@ use crate::descriptors::{
 };
 use crate::device::{create_logical_device, pick_physical_device};
 use crate::framebuffer::create_framebuffers;
-use crate::images::{create_texture_image, create_texture_image_view, create_texture_sampler};
+use crate::images::{
+    create_color_objects, create_texture_image, create_texture_image_view, create_texture_sampler,
+};
 use crate::memory::{create_index_buffer, create_vertex_buffer};
 use crate::model::load_model;
 use crate::pipeline::{create_pipeline, create_render_pass};
@@ -125,6 +127,7 @@ pub unsafe fn create_app(window: &Window) -> Result<App> {
     create_descriptor_set_layout(&device, &mut data)?;
     create_pipeline(&device, &mut data)?;
     create_command_pool(&instance, &device, &mut data)?;
+    create_color_objects(&instance, &device, &mut data)?;
     create_depth_objects(&instance, &device, &mut data)?;
     create_framebuffers(&device, &mut data)?;
     create_texture_image(&instance, &device, &mut data)?;
