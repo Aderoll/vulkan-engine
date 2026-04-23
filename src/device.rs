@@ -9,6 +9,7 @@ use vulkanalia::prelude::v1_3::*;
 
 use crate::swapchain::*;
 use crate::AppData;
+use crate::GPU_POOR;
 
 #[derive(Debug, Error)]
 #[error("{0}")]
@@ -89,7 +90,7 @@ unsafe fn check_physical_device(
         return Err(anyhow!(SuitabilityError("No sampler anisotropy.")));
     }
     let properties = instance.get_physical_device_properties(physical_device);
-    if properties.device_type != vk::PhysicalDeviceType::DISCRETE_GPU {
+    if properties.device_type != vk::PhysicalDeviceType::DISCRETE_GPU && !GPU_POOR {
         return Err(anyhow!(SuitabilityError("Is not a DISCRETE_GPU")));
     }
 
