@@ -10,7 +10,7 @@ use crate::descriptors::UniformBufferObject;
 use crate::vertices::Vertex;
 use crate::{App, AppData};
 
-use cgmath::{point3, vec3, Deg};
+use cgmath::{point3, vec3, Deg, EuclideanSpace, Point3};
 
 pub unsafe fn get_memory_type_index(
     instance: &Instance,
@@ -198,8 +198,8 @@ pub unsafe fn update_uniform_buffer(app: &mut App, image_index: usize) -> Result
     let model = Mat4::from_axis_angle(vec3(0.0, 0.0, 1.0), Deg(90.0) * time);
 
     let view = Mat4::look_at_rh(
-        point3(2.0, 2.0, 2.0),
-        point3(0.0, 0.0, 0.0),
+        Point3::from_vec(app.camera.position),
+        Point3::from_vec(app.camera.get_look_at() + app.camera.position),
         vec3(0.0, 0.0, 1.0),
     );
 

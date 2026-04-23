@@ -25,6 +25,7 @@ use vulkanalia::vk::ExtDebugUtilsExtensionInstanceCommands;
 use vulkanalia::vk::KhrSurfaceExtensionInstanceCommands;
 use vulkanalia::vk::KhrSwapchainExtensionDeviceCommands;
 
+use crate::camera::Camera;
 use crate::command::create_command_buffers;
 use crate::debug::debug_callback;
 use crate::depth::create_depth_objects;
@@ -32,6 +33,7 @@ use crate::descriptors::{create_descriptor_pool, create_descriptor_sets};
 use crate::framebuffer::create_framebuffers;
 use crate::images::create_color_objects;
 use crate::initialization::create_app;
+use crate::input::get_keyboard_inputs;
 use crate::pipeline::{create_pipeline, create_render_pass};
 use crate::swapchain::{create_swapchain, create_swapchain_image_views};
 use crate::vertices::Vertex;
@@ -39,6 +41,7 @@ use memory::{create_uniform_buffers, update_uniform_buffer};
 
 use std::collections::HashSet;
 
+mod camera;
 mod command;
 mod debug;
 mod depth;
@@ -47,6 +50,7 @@ mod device;
 mod framebuffer;
 mod images;
 mod initialization;
+mod input;
 mod memory;
 mod model;
 mod pipeline;
@@ -159,6 +163,12 @@ pub fn run() -> Result<()> {
                         app.resized = true;
                     }
                 }
+                // Get our inputs
+                WindowEvent::KeyboardInput {
+                    device_id,
+                    event,
+                    is_synthetic,
+                } => get_keyboard_inputs(&mut app, &event).unwrap(),
                 // Destroy our Vulkan app.
                 WindowEvent::CloseRequested => {
                     elwt.exit();
@@ -178,6 +188,7 @@ pub fn run() -> Result<()> {
 /// Our Vulkan app.
 #[derive(Clone, Debug)]
 struct App {
+    pub camera: Camera,
     entry: Entry,
     instance: Instance,
     data: AppData,

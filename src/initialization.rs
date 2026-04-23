@@ -2,6 +2,9 @@ use anyhow::{anyhow, Result};
 use std::collections::HashSet;
 use std::time::Instant;
 
+use cgmath::vec3;
+
+use crate::camera::Camera;
 use crate::command::{create_command_buffers, create_command_pool};
 use crate::create_uniform_buffers;
 use crate::debug::debug_callback;
@@ -141,7 +144,12 @@ pub unsafe fn create_app(window: &Window) -> Result<App> {
     create_descriptor_sets(&device, &mut data)?;
     create_command_buffers(&device, &mut data)?;
     create_sync_objects(&device, &mut data)?;
+    let camera = Camera {
+        position: vec3(2.0, 2.0, 2.0),
+        orientation: vec3(0.0, 0.0, 0.0),
+    };
     Ok(App {
+        camera,
         entry,
         instance,
         data,
