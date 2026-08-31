@@ -1,8 +1,9 @@
 use anyhow::{anyhow, Result};
 use std::collections::HashSet;
 use std::time::Instant;
+use winit_input_helper::WinitInputHelper;
 
-use cgmath::vec3;
+use cgmath::{vec2, vec3};
 
 use crate::camera::Camera;
 use crate::command::{create_command_buffers, create_command_pool};
@@ -120,6 +121,7 @@ pub unsafe fn create_app(window: &Window) -> Result<App> {
         max_frames_in_flight: 2, // TODO: Make better way to change it
         ..Default::default()
     };
+    let input_helper = WinitInputHelper::new();
     let instance = create_instance(window, &entry, &mut data)?;
     data.surface = vk_window::create_surface(&instance, &window, &window)?;
     pick_physical_device(&instance, &mut data)?;
@@ -147,9 +149,11 @@ pub unsafe fn create_app(window: &Window) -> Result<App> {
     let camera = Camera {
         position: vec3(2.0, 2.0, 2.0),
         orientation: vec3(0.0, 0.0, 0.0),
+        mouse_pos: vec2(0.0, 0.0),
     };
     Ok(App {
         camera,
+        input_helper,
         entry,
         instance,
         data,
@@ -157,5 +161,7 @@ pub unsafe fn create_app(window: &Window) -> Result<App> {
         frame: 0,
         resized: false,
         start: Instant::now(),
+        last_frame: Instant::now(),
+        last_mouse_pos: vec2(0.0, 0.0),
     })
 }

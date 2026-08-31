@@ -10,14 +10,18 @@
 )]
 
 use anyhow::{anyhow, Result};
+use cgmath::vec2;
+use cgmath::{Vector2, Vector3};
 use log::*;
 use vulkanalia::prelude::v1_3::*;
 use vulkanalia::window as vk_window;
 use vulkanalia::Version;
 use winit::dpi::LogicalSize;
+use winit::dpi::PhysicalPosition;
 use winit::event::{Event, WindowEvent};
 use winit::event_loop::EventLoop;
 use winit::window::{Window, WindowBuilder};
+use winit_input_helper::WinitInputHelper;
 
 use std::time::Instant;
 
@@ -33,7 +37,8 @@ use crate::descriptors::{create_descriptor_pool, create_descriptor_sets};
 use crate::framebuffer::create_framebuffers;
 use crate::images::create_color_objects;
 use crate::initialization::create_app;
-use crate::input::get_keyboard_inputs;
+use crate::input::process_inputs;
+use crate::input::{get_inputs, mouse_moved};
 use crate::pipeline::{create_pipeline, create_render_pass};
 use crate::swapchain::{create_swapchain, create_swapchain_image_views};
 use crate::vertices::Vertex;
@@ -145,7 +150,14 @@ pub fn run() -> Result<()> {
 
     let mut app = unsafe { create_app(&window)? };
     let mut minimized = false;
+
+    window
+        .set_cursor_grab(winit::window::CursorGrabMode::Confined)
+        .unwrap();
+    // window.set_cursor_visible(false);
+
     event_loop.run(move |event, elwt| {
+        get_inputs(&mut app, &event).expect("Could not get input from Event");
         match event {
             // Request a redraw when all events were processed.
             Event::AboutToWait => window.request_redraw(),
@@ -163,12 +175,9 @@ pub fn run() -> Result<()> {
                         app.resized = true;
                     }
                 }
-                // Get our inputs
-                WindowEvent::KeyboardInput {
-                    device_id,
-                    event,
-                    is_synthetic,
-                } => get_keyboard_inputs(&mut app, &event).unwrap(),
+                WindowEvent::CursorMoved { position, .. } => {
+                    mouse_moved(&mut app, position).unwrap()
+                }
                 // Destroy our Vulkan app.
                 WindowEvent::CloseRequested => {
                     elwt.exit();
@@ -186,9 +195,10 @@ pub fn run() -> Result<()> {
 }
 
 /// Our Vulkan app.
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 struct App {
     pub camera: Camera,
+    input_helper: WinitInputHelper,
     entry: Entry,
     instance: Instance,
     data: AppData,
@@ -196,11 +206,19 @@ struct App {
     frame: usize,
     resized: bool,
     start: Instant,
+    last_frame: Instant,
+    last_mouse_pos: Vector2<f64>,
 }
 
 impl App {
     /// Renders a frame for our Vulkan app.
     unsafe fn render(&mut self, window: &Window) -> Result<()> {
+        process_inputs(self).unwrap();
+        self.camera.update_camera().unwrap();
+
+        // We don't need the delta time anymore so we update it'
+        self.last_frame = Instant::now();
+
         let in_flight_fence = self.data.in_flight_fences[self.frame];
 
         self.device
